@@ -1,0 +1,14 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<project version="4">
+  <component name="WebServers">
+    <option name="servers">
+      <webServer id="7642b1f3-baa3-4c42-8887-b1a0c692f93d" name="csf_hpc">
+        <fileTransfer rootFolder="/mnt/iusers01/fatpou01/compsci01/g25298tr" accessType="SFTP" host="csf3.itservices.manchester.ac.uk" port="22" sshConfigId="50dc2ac6-442e-4e77-af92-43b57e1eadb8" sshConfig="g25298tr@csf3.itservices.manchester.ac.uk:22 password">
+          <advancedOptions>
+            <advancedOptions dataProtectionLevel="Private" passiveMode="true" shareSSLContext="true" />
+          </advancedOptions>
+        </fileTransfer>
+      </webServer>
+    </option>
+  </component>
+</project>

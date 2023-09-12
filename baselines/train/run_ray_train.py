@@ -13,6 +13,9 @@ from ray.air.integrations.wandb import WandbLoggerCallback
 from baselines.train import make_envs
 
 def get_cli_args():
+  '''
+  get all cli input
+  '''
   
   parser = argparse.ArgumentParser(description="Training Script for Multi-Agent RL in Meltingpot")
   
@@ -95,7 +98,7 @@ def get_cli_args():
         action="store_true",
         help="Whether this script should be run as a test.",
   )
-
+  #  runs the parser and places the extracted data
   args = parser.parse_args()
   print("Running trails with the following arguments: ", args)
   return args
@@ -107,7 +110,7 @@ if __name__ == "__main__":
   args = get_cli_args()
 
   # Set up Ray. Use local mode for debugging. Ignore reinit error.
-  ray.init(local_mode=args.local, ignore_reinit_error=True)
+  ray.init(local_mode=args.local, ignore_reinit_error=True,num_gpus=args.num_gpus)
 
   # Register meltingpot environment
   registry.register_env("meltingpot", make_envs.env_creator)

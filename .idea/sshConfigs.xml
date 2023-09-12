@@ -1,0 +1,8 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<project version="4">
+  <component name="SshConfigs">
+    <configs>
+      <sshConfig authType="PASSWORD" connectionConfig="{&quot;serverAliveInterval&quot;:300}" host="csf3.itservices.manchester.ac.uk" id="50dc2ac6-442e-4e77-af92-43b57e1eadb8" port="22" nameFormat="DESCRIPTIVE" username="g25298tr" useOpenSSHConfig="true" />
+    </configs>
+  </component>
+</project>

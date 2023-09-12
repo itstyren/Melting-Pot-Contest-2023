@@ -14,21 +14,31 @@ from collections import defaultdict
 from meltingpot.utils.evaluation import evaluation
 from meltingpot.utils.policies import policy as policy_lib
 
+# define a factory function for with statement context managers
 @contextlib.contextmanager
 def build_focal_population(
     ckpt_paths, policy_ids, scale
 ) -> Iterator[Mapping[str, policy_lib.Policy]]:
-  """Builds a population from the specified saved models.
+  """Create context managers using a generator-based approach
+     Builds a population from the specified saved models.
+     
 
   Args:
     ckpt_paths: path where agent policies are stored
-    policy ids: policy ids for each agent
+    policy ids:  A list of policy IDs for each agent.
+    scale: Scale factor by which to downsaple the observation
 
   Yields:
     A mapping from policy id to policy required to build focal population for evaluation.
   """
+  #  Generator function with a yield statement
+  # ExitStack: combine other context managers and cleanup functions
+  # it's not explicitly defined once with block is exited, the ExitStack context manager will take care of any necessary cleanup
   with contextlib.ExitStack() as stack:
+    # creates a mapping from policy ID to policy objects
     yield {
+        # enter_context: Enters a new context manager and adds its __exit__() method to the callback stack.
+        # Calling the function on the wrapper
         p_id: stack.enter_context(DownsamplingPolicyWraper(EvalPolicy(ckpt_paths, p_id), scale))
         for p_id in policy_ids
     }
@@ -45,27 +55,38 @@ def run_evaluation(args):
   ray.init()
   config_file = f'{args.config_dir}/params.json'
   f = open(config_file)
+  # get config during trainning
   configs = json.load(f)
+
   if args.eval_on_scenario:
+    # eval on scenario
     scenario = args.scenario
   else:
+    # eval on substrate
     scenario = configs['env_config']['substrate']
   scaled = configs['env_config']['scaled']
 
+  # store video
   if args.create_videos:
     video_dir = args.video_dir
   else:
     video_dir = None
     
   policies_path = args.policies_dir
+  # Explicite the role of all players
   roles = configs['env_config']['roles']
   policy_ids = [f"agent_{i}" for i in range(len(roles))]
+  # Return a new dictionary-like object.
   names_by_role = defaultdict(list)
+
+  # Name all players by role
   for i in range(len(policy_ids)):
     names_by_role[roles[i]].append(policy_ids[i])
 
-  # Build population and evaluate
+  # Build focal population and evaluate
+  # use the context manager with a 'with' statement
   with build_focal_population(policies_path, policy_ids, scaled) as population:
+    # evaluate the performance of the focal population (meltpot method)
     results = evaluation.evaluate_population(
         population=population,
         names_by_role=names_by_role,

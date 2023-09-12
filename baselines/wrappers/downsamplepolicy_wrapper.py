@@ -4,6 +4,10 @@ from meltingpot.utils.policies import policy
 from typing import Any
 
 def _downsample_single_timestep(timestep: dm_env.TimeStep, scale) -> dm_env.TimeStep:
+    '''
+    applies downsampling to observations in the dm_env.TimeStep objects
+    '''
+    # _replace: create a new object with some fields replaced while keeping other fields the same
     return timestep._replace(
         observation={k: utils.downsample_observation(v, scale) if k == 'RGB' else v for k, v in timestep.observation.items()
         })

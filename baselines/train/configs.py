@@ -1,6 +1,8 @@
 from meltingpot import substrate
 from ray.rllib.policy import policy
 from baselines.train import make_envs
+from baselines.customs import random_policy
+
 
 SUPPORTED_SCENARIOS = [
     'allelopathic_harvest__open_0',
@@ -29,6 +31,15 @@ IGNORE_KEYS = ['WORLD.RGB', 'INTERACTION_INVENTORIES', 'NUM_OTHERS_WHO_CLEANED_T
 
 
 def get_experiment_config(args, default_config):
+    '''Fetch experiment configurations
+
+    Args:
+        args: argparse.Namespace object
+        default_config: Configuration class from which a PPO Algorithm
+    
+    Returns:
+
+    '''
     
     if args.exp == 'pd_arena':
         substrate_name = "prisoners_dilemma_in_the_matrix__arena"
@@ -45,6 +56,7 @@ def get_experiment_config(args, default_config):
     # Fetch player roles
     player_roles = substrate.get_config(substrate_name).default_player_roles
 
+    # if downsample the imput image data 
     if args.downsample:
         scale_factor = 8
     else:
@@ -63,36 +75,37 @@ def get_experiment_config(args, default_config):
 
         # training
         "seed": args.seed,
-        "rollout_fragment_length": 10,
-        "train_batch_size": 400,
-        "sgd_minibatch_size": 32,
+        "rollout_fragment_length": 5, # Divide episodes into fragments of this many steps each during rollouts. 
+        "train_batch_size": 40, # Batch size (batch * rollout_fragment_length) Trajectories of this size are collected from rollout workers and combined into a larger batch of train_batch_size for learning. 
+        "sgd_minibatch_size": 32, #  PPO further divides the train batch into minibatches for multi-epoch SGD
         "disable_observation_precprocessing": True,
         "use_new_rl_modules": False,
         "use_new_learner_api": False,
-        "framework": args.framework,
+        "framework": args.framework,  # torch or tensorflow 
 
         # agent model
-        "fcnet_hidden": (4, 4),
-        "post_fcnet_hidden": (16,),
+        "fcnet_hidden": (4, 4), # fully connected network
+        "post_fcnet_hidden": (16,), # Layer sizes after the fully connected torso.
         "cnn_activation": "relu",
         "fcnet_activation": "relu",
         "post_fcnet_activation": "relu",
+        # == LSTM ==
         "use_lstm": True,
         "lstm_use_prev_action": True,
         "lstm_use_prev_reward": False,
-        "lstm_cell_size": 2,
+        "lstm_cell_size": 2,  # A cell, is an LSTM unit 
         "shared_policy": False,
 
         # experiment trials
         "exp_name": args.exp,
-        "stopping": {
-                    #"timesteps_total": 1000000,
-                    "training_iteration": 1,
+        "stopping": { # Stop using metric-based criteria
+                    "timesteps_total": 2000,
+                    # "training_iteration": 1,
                     #"episode_reward_mean": 100,
         },
-        "num_checkpoints": 5,
-        "checkpoint_interval": 10,
-        "checkpoint_at_end": True,
+        "num_checkpoints": 5, #  The number of checkpoints to keep on disk for this run
+        "checkpoint_interval": 10, #  Number of iterations between checkpoints.
+        "checkpoint_at_end": True, #  save a checkpoint at the end of training.
         "results_dir": args.results_dir,
         "logging": args.logging,
 
@@ -121,13 +134,14 @@ def get_experiment_config(args, default_config):
     run_configs.log_level = params_dict['logging']
     run_configs.seed = params_dict['seed']
 
-    # Environment
+    # 4. Extract space dimensions
     run_configs.env = params_dict['env_name']
     run_configs.env_config = params_dict['env_config']
 
+    base_env = make_envs.env_creator(run_configs.env_config)
+
     # Setup multi-agent policies. The below code will initialize independent
     # policies for each agent.
-    base_env = make_envs.env_creator(run_configs.env_config)
     policies = {}
     player_to_agent = {}
     for i in range(len(player_roles)):
@@ -136,6 +150,7 @@ def get_experiment_config(args, default_config):
         sprite_y = rgb_shape[1]
 
         policies[f"agent_{i}"] = policy.PolicySpec(
+            # policy_class=random_policy.RandomPolicy(i),  # use default policy
             observation_space=base_env.observation_space[f"player_{i}"],
             action_space=base_env.action_space[f"player_{i}"],
             config={
@@ -146,9 +161,11 @@ def get_experiment_config(args, default_config):
             })
         player_to_agent[f"player_{i}"] = f"agent_{i}"
 
+    # 5. Configuration for multi-agent setup with one policy per role:
     run_configs.multi_agent(policies=policies, policy_mapping_fn=(lambda agent_id, *args, **kwargs: 
                                                                   player_to_agent[agent_id]))
     
+    # 6. Set the agent architecture.
     run_configs.model["fcnet_hiddens"] = params_dict['fcnet_hidden']
     run_configs.model["post_fcnet_hiddens"] = params_dict['post_fcnet_hidden']
     run_configs.model["conv_activation"] = params_dict['cnn_activation'] 
